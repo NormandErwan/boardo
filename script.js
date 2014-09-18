@@ -40,7 +40,7 @@ function addEntry(previous_entry) {
 	
 	actions.style.display = 'none';
 	addEvent(new_entry, 'mouseover', function() {
-		if (content_edit.style.display == 'none')
+		if (content_edit.style.display != 'block')
 			actions.style.display = ''; 
 	});
 	addEvent(new_entry, 'mouseout', function() { actions.style.display = 'none'; });

@@ -4,6 +4,10 @@ body, input {
 	font-family: Arial;
 }
 
+input:focus {
+	outline: none;
+}
+
 #entries {
 }
 
