@@ -9,7 +9,6 @@ body, input {
 
 	#entries .entry {
 		position: relative;
-		clear: left;
 	}
 	
 	#entries .entry#entry_template {
@@ -24,13 +23,12 @@ body, input {
 	}
 	
 	#entries .entry .content {
-		float: left;
+		display: inline-block;
 		margin-right: 50px;
 	}
 	
 	#entries .entry .actions {
-		display: none;
-		padding: 5px 0;
+		display: inline-block;
 	}
 	
 		#entries .entry .actions .action {

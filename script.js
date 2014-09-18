@@ -3,9 +3,18 @@
  */
 function addEvent(element, event, func) {
     if (element.attachEvent) //IE
-        element.attachEvent("on" + event, func);
+        element.attachEvent('on' + event, func);
     else
         element.addEventListener(event, func, true);
+}
+
+function insertAfter(previous_element, new_element) {
+    var parent = previous_element.parentNode;
+	
+    if (parent.lastChild === previous_element)
+        parent.appendChild(new_element);
+    else
+        parent.insertBefore(new_element, previous_element.nextSibling);
 }
 
 /* 
@@ -19,25 +28,40 @@ function focus(input) {
 /*
  * Add a new entry.
  */
-function addEntry() {
+function addEntry(previous_entry) {
 	var entries = document.getElementById('entries');
 	var entry_template = document.getElementById('entry_template');
 	var new_entry = entry_template.cloneNode(true);
+	var content_edit = new_entry.getElementsByClassName('content_edit')[0];
+	var actions = new_entry.getElementsByClassName('actions')[0];
 	
 	if (entries.length > 1) // No entries, avoid a loop
 		cleanEntries();
 	
-	new_entry.setAttribute('id', '');
+	actions.style.display = 'none';
 	addEvent(new_entry, 'mouseover', function() {
-		if (new_entry.getElementsByClassName('content_edit')[0].style.display == 'none')
-			new_entry.getElementsByClassName('actions')[0].style.visibility = 'visible'; 
+		if (content_edit.style.display == 'none')
+			actions.style.display = ''; 
 	});
-	addEvent(new_entry, 'mouseout', function() { new_entry.getElementsByClassName('actions')[0].style.visibility = 'hidden'; });
+	addEvent(new_entry, 'mouseout', function() { actions.style.display = 'none'; });
 	addEvent(new_entry.getElementsByClassName('content')[0], 'click', function() { editEntry(new_entry); });
 	addEvent(new_entry.getElementsByClassName('action edit')[0], 'click', function() { editEntry(new_entry); });
 	addEvent(new_entry.getElementsByClassName('action done')[0], 'click', function() { doneEntry(new_entry); });
-	addEvent(new_entry.getElementsByClassName('content_edit')[0], 'focusout', function() { editEntryDone(new_entry); });
-	entries.appendChild(new_entry);
+	addEvent(content_edit, 'focusout', function() { editEntryDone(new_entry); });
+	addEvent(content_edit, 'keypress', function(e) { 
+		if (!e) e = window.event;
+		var keyCode = e.keyCode || e.which;
+		if (keyCode == '13') {
+			editEntryDone(new_entry);
+			addEntry(new_entry);
+		}
+	});
+	
+	new_entry.setAttribute('id', '');
+	if (typeof previous_entry === 'undefined')
+		entries.appendChild(new_entry);
+	else
+		insertAfter(previous_entry, new_entry);
 	editEntry(new_entry);
 }
 
@@ -65,7 +89,7 @@ function editEntryDone(entry) {
 	
 	content_edit.blur();
 	content.innerHTML = content_edit.value;
-	content_edit.style.display = 'none';
+	content_edit.style.display = '';
 	content.style.visibility = 'visible';
 }
 
