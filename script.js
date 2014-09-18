@@ -26,6 +26,7 @@ function addEntry() {
 	addEvent(new_entry, 'mouseout', function() { new_entry.getElementsByClassName('actions')[0].style.display = 'none'; });
 	addEvent(new_entry.getElementsByClassName('content')[0], 'click', function() { editEntry(new_entry); });
 	addEvent(new_entry.getElementsByClassName('action edit')[0], 'click', function() { editEntry(new_entry); });
+	addEvent(new_entry.getElementsByClassName('action done')[0], 'click', function() { doneEntry(new_entry); });
 	addEvent(new_entry.getElementsByClassName('content_edit')[0], 'focusout', function() { editEntryDone(new_entry); });
 	entries.appendChild(new_entry);
 	editEntry(new_entry);
@@ -37,7 +38,6 @@ function editEntry(entry) {
 	
 	content.style.display = 'none';
 	content_edit.style.display = 'block';
-	//content_edit.focus();
 	focus(content_edit);
 }
 
@@ -46,11 +46,22 @@ function editEntryDone(entry) {
 	var content_edit = entry.getElementsByClassName('content_edit')[0];
 	
 	cleanEntries();
+	undoEntry(entry);
 	
 	content_edit.blur();
 	content.innerHTML = content_edit.value;
 	content_edit.style.display = 'none';
 	content.style.display = 'block';
+}
+
+function doneEntry(entry) {
+	var content = entry.getElementsByClassName('content')[0].style.textDecoration = 'line-through';
+	entry.getElementsByClassName('action done')[0].style.visibility = 'hidden';
+}
+
+function undoEntry(entry) {
+	var content = entry.getElementsByClassName('content')[0].style.textDecoration = '';
+	entry.getElementsByClassName('action done')[0].style.visibility = 'visible';
 }
 
 function cleanEntries() {
@@ -72,30 +83,3 @@ addEvent(window, "load", function() {
 	addEvent(document.getElementById('add_entry'), "click", addEntry);
 	cleanEntries();
 });
-
-/* TODO :
- | parcourir les entry et supprimer les vides
- | si aucune entry en ajouter une automatiquement
- * undo/redo
- * style : tableau en fond, images buttons, police craie
- * afficher actions onover
- * sauvegarder etat fichier texte
- * creer un nouveau tableau avec id
- | pouvoir edit
- | sortir de l'edit avec click, tab ou entrée
- * entrée -> nouvelle entry après celle où edit
- * maj+entrée -> entry sur plusieurs lignes
- * entry sur plusieurs lignes possible
- * pouvoir done
- | après add entry, automatiquement edit + focus
- * mettre en ligne
- * choix couleur craie
- * choix pseudo
- * detect différences après edit et sais utilisateur de chaque caractère
- * s'enregistrer sur le tableau
- * partie admin : choix couleur, droits tableau, mails invite lecteur, mail invite editeur, couleurs, theme
- * gestion theme
- * compte site : connaitre ses tableaux, ceux où admin
- * partager tableau communauté
- * historique
- */
