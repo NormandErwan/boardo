@@ -1,0 +1,61 @@
+body, input {
+	background-color: #222;
+	color: #eee;
+	font-family: Arial;
+}
+
+#entries {
+}
+
+	#entries .entry {
+		position: relative;
+		clear: left;
+	}
+	
+	#entries .entry#entry_template {
+		display: none;
+	}
+	
+	#entries .entry .content, #entries .entry .content_edit {
+		font-size: 28px;
+		margin: 0;
+		border: 0;
+		padding: 0;
+	}
+	
+	#entries .entry .content {
+		float: left;
+		margin-right: 50px;
+	}
+	
+	#entries .entry .actions {
+		display: none;
+		padding: 5px 0;
+	}
+	
+		#entries .entry .actions .action {
+			margin: 0 5px;
+		}
+	
+	#entries .entry .content_edit {
+		display: none;
+		position: absolute;
+		top: 0;
+		padding-bottom: 0px;
+		border-bottom: 3px #eee solid;
+	}
+	
+	#entries .entry .content_edit:hover {
+		
+	}
+
+	
+#actions {
+	position: absolute;
+	bottom: 20px;
+	clear: left;
+}
+
+	#actions #add_entry {
+
+	}
