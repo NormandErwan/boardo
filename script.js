@@ -128,6 +128,6 @@ function cleanEntries() {
 }
 
 addEvent(window, "load", function() { 
-	addEvent(document.getElementById('add_entry'), "click", addEntry);
+	addEvent(document.getElementById('add_entry'), "click", function(e) { addEntry(); });
 	cleanEntries();
 });
