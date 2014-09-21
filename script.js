@@ -8,6 +8,13 @@ function addEvent(element, event, func) {
         element.addEventListener(event, func, true);
 }
 
+function getStyle(element) {
+	if (element.currentStyle) //IE
+		return element.currentStyle;
+	else
+		return getComputedStyle(element, null);
+}
+
 function insertAfter(previous_element, new_element) {
     var parent = previous_element.parentNode;
 	
@@ -32,23 +39,42 @@ function addEntry(previous_entry) {
 	var entries = document.getElementById('entries');
 	var entry_template = document.getElementById('entry_template');
 	var new_entry = entry_template.cloneNode(true);
+	var content = new_entry.getElementsByClassName('content')[0];
 	var content_edit = new_entry.getElementsByClassName('content_edit')[0];
 	var actions = new_entry.getElementsByClassName('actions')[0];
 	
 	if (entries.length > 1) // No entries, avoid a loop
 		cleanEntries();
-	
-	actions.style.display = 'none';
+		
 	addEvent(new_entry, 'mouseover', function() {
 		if (content_edit.style.display != 'block')
 			actions.style.display = ''; 
 	});
 	addEvent(new_entry, 'mouseout', function() { actions.style.display = 'none'; });
-	addEvent(new_entry.getElementsByClassName('content')[0], 'click', function() { editEntry(new_entry); });
+	addEvent(content, 'click', function() { editEntry(new_entry); });
 	addEvent(new_entry.getElementsByClassName('action edit')[0], 'click', function() { editEntry(new_entry); });
 	addEvent(new_entry.getElementsByClassName('action done')[0], 'click', function() { doneEntry(new_entry); });
 	addEvent(content_edit, 'focusout', function() { editEntryDone(new_entry); });
-	addEvent(content_edit, 'keypress', function(e) { 
+	
+	actions.style.display = 'none';
+	new_entry.setAttribute('id', '');
+	
+	if (typeof previous_entry === 'undefined')
+		entries.appendChild(new_entry);
+	else
+		insertAfter(previous_entry, new_entry);
+	editEntry(new_entry);
+	
+	content_edit.setAttribute('size', content_edit.getAttribute('placeholder').length);
+	var content_edit_margin = parseInt(getStyle(content).marginRight);
+	var content_edit_default_width = parseInt(getStyle(content_edit).width) + content_edit_margin;
+	content_edit.style.width = content_edit_default_width + 'px';
+	addEvent(content_edit, 'keyup', function(e) {
+		// content_edit autosize
+		content.innerHTML = content_edit.value;
+		content_edit.style.width = Math.max(parseInt(getStyle(content).width) + content_edit_margin, content_edit_default_width) + 'px';
+		
+		// Add a new entry when Enter is pressed
 		if (!e) e = window.event;
 		var keyCode = e.keyCode || e.which;
 		if (keyCode == '13') {
@@ -56,13 +82,6 @@ function addEntry(previous_entry) {
 			addEntry(new_entry);
 		}
 	});
-	
-	new_entry.setAttribute('id', '');
-	if (typeof previous_entry === 'undefined')
-		entries.appendChild(new_entry);
-	else
-		insertAfter(previous_entry, new_entry);
-	editEntry(new_entry);
 }
 
 /*
