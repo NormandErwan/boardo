@@ -7,7 +7,7 @@ var Boardo = {
 		if (element.attachEvent) //IE
 			element.attachEvent('on' + event, func);
 		else
-			element.addEventListener(event, func, true);
+			element.addEventListener(event, func, false);
 	},
 	
 	/*
@@ -39,122 +39,127 @@ var Boardo = {
 		input.value = input.value;
 	},
 	
-	Entries : {
-		/*
-		 * Add a new entry.
-		 */
-		add: function(previous_entry) {
-			var entries = document.getElementById('entries');
-			var new_entry = document.getElementById('entry_template').cloneNode(true);
-			var content = new_entry.getElementsByClassName('content')[0];
-			var content_edit = new_entry.getElementsByClassName('content_edit')[0];
-			var actions = new_entry.getElementsByClassName('actions')[0];
+	Entries: function() {
+		this.node = document.getElementById('entries');
+		this.entries = this.node.getElementsByClassName('entry');
+		this.entry_nodes = [];
+		
+		this.add = function(previous_entry) {
+			var new_entry = new Boardo.Entry();
+			this.entry_nodes.push(new_entry);
 			
-			if (entries.length > 1) // No entries, avoid a loop
+			if (this.entries.length > 1) // No entries, avoid a loop
 				this.clean();
-				
-			Boardo.addEvent(new_entry, 'mouseover', function() {
-				if (content_edit.style.display != 'block')
-					actions.style.display = ''; 
-			});
-			Boardo.addEvent(new_entry, 'mouseout', function() { actions.style.display = 'none'; });
-			Boardo.addEvent(content, 'click', function() { Boardo.Entries.edit(new_entry); });
-			Boardo.addEvent(new_entry.getElementsByClassName('action edit')[0], 'click', function() { Boardo.Entries.edit(new_entry); });
-			Boardo.addEvent(new_entry.getElementsByClassName('action done')[0], 'click', function() { Boardo.Entries.done(new_entry); });
-			Boardo.addEvent(content_edit, 'focusout', function() { Boardo.Entries.editDone(new_entry); });
 			
-			actions.style.display = 'none';
-			new_entry.setAttribute('id', '');
+			Boardo.addEvent(new_entry.node, 'mouseover', function() {
+				if (new_entry.content_edit.style.display != 'block')
+					new_entry.actions.style.display = ''; 
+			});
+			Boardo.addEvent(new_entry.node, 'mouseout', function() { new_entry.actions.style.display = 'none'; });
+			Boardo.addEvent(new_entry.content, 'click', function() { new_entry.edit() });
+			Boardo.addEvent(new_entry.action_edit, 'click', function() { new_entry.edit() });
+			Boardo.addEvent(new_entry.action_done, 'click', function() { new_entry.done() });
+			Boardo.addEvent(new_entry.content_edit, 'focusout', function() { new_entry.editDone() });
+			
+			new_entry.actions.style.display = 'none';
+			new_entry.node.setAttribute('id', '');
 			
 			if (typeof previous_entry === 'undefined')
-				entries.appendChild(new_entry);
+				this.node.appendChild(new_entry.node);
 			else
-				Boardo.insertAfter(previous_entry, new_entry);
-			this.edit(new_entry);
+				Boardo.insertAfter(previous_entry, new_entry.node);
 			
-			content_edit.setAttribute('size', content_edit.getAttribute('placeholder').length);
-			var content_edit_margin = parseInt(Boardo.getStyle(content).marginRight);
-			var content_edit_default_width = parseInt(Boardo.getStyle(content_edit).width) + content_edit_margin;
-			content_edit.style.width = content_edit_default_width + 'px';
-			Boardo.addEvent(content_edit, 'keyup', function(e) {
+			new_entry.edit();
+			
+			new_entry.content_edit.setAttribute('size', new_entry.content_edit.getAttribute('placeholder').length);
+			var content_edit_margin = parseInt(Boardo.getStyle(new_entry.content).marginRight);
+			var content_edit_default_width = parseInt(Boardo.getStyle(new_entry.content_edit).width) + content_edit_margin;
+			new_entry.content_edit.style.width = content_edit_default_width + 'px';
+			Boardo.addEvent(new_entry.content_edit, 'keyup', function(e) {
 				// content_edit autosize
-				content.innerHTML = content_edit.value;
-				content_edit.style.width = Math.max(parseInt(Boardo.getStyle(content).width) + content_edit_margin, content_edit_default_width) + 'px';
+				new_entry.content.innerHTML = new_entry.content_edit.value;
+				new_entry.content_edit.style.width = Math.max(parseInt(Boardo.getStyle(new_entry.content).width) + content_edit_margin, content_edit_default_width) + 'px';
 				
 				// Add a new entry when Enter is pressed
 				if (!e) e = window.event;
 				var keyCode = e.keyCode || e.which;
 				if (keyCode == '13') {
-					Boardo.Entries.editDone(new_entry);
-					Boardo.Entries.add(new_entry);
+					new_entry.editDone();
+					entries.add(new_entry.node);
 				}
 			});
-		},
-
+		};
+		
 		/*
-		 * Start editing an entry.
+		 *	Remove all the entries with content_edit's value empty.
 		 */
-		edit: function(entry) {
-			var content = entry.getElementsByClassName('content')[0];
-			var content_edit = entry.getElementsByClassName('content_edit')[0];
-			
-			content.style.visibility = 'hidden';
-			content_edit.style.display = 'block';
-			Boardo.focus(content_edit);
-		},
-
-		/*
-		 * Finished editing an entry.
-		 */
-		editDone: function(entry) {
-			var content = entry.getElementsByClassName('content')[0];
-			var content_edit = entry.getElementsByClassName('content_edit')[0];
-			
-			this.undone(entry);
-			this.clean();
-			
-			content_edit.blur();
-			content.innerHTML = content_edit.value;
-			content_edit.style.display = '';
-			content.style.visibility = 'visible';
-		},
-
-		/*
-		 * Mark an entry as done.
-		 */
-		done: function(entry) {
-			entry.getElementsByClassName('content')[0].style.textDecoration = 'line-through';
-			entry.getElementsByClassName('action done')[0].style.visibility = 'hidden';
-		},
-
-		/*
-		 * Mark an entry as undone.
-		 */
-		undone: function(entry) {
-			entry.getElementsByClassName('content')[0].style.textDecoration = '';
-			entry.getElementsByClassName('action done')[0].style.visibility = 'visible';
-		},
-
-		/*
-		 *	Remove all the entry with content_edit's value empty.
-		 */
-		clean: function() {
-			var entries = document.getElementById('entries').getElementsByClassName('entry');
-			for (var i = 0; i < entries.length; i++) {
-				var content_edit = entries[i].getElementsByClassName('content_edit')[0];
-				if (content_edit.value == '' && entries[i].id != 'entry_template')
-					entries[i].parentNode.removeChild(entries[i]);
+		this.clean = function() {
+			for (var i = 0; i < this.entries.length; i++) {
+				var content_edit = this.entries[i].getElementsByClassName('content_edit')[0];
+				if (content_edit.value == '' && this.entries[i].id != 'entry_template')
+					this.entries[i].parentNode.removeChild(this.entries[i]);
 				else
 					content_edit.blur();
 			}
 			
-			if (entries.length == 1) // Automatically add a first entry
+			if (this.entries.length == 1) // Automatically add a first entry
 				this.add();
+		};
+	}, // Entries
+	
+	Entry: function() {
+		this.node = document.getElementById('entry_template').cloneNode(true);
+		this.content = this.node.getElementsByClassName('content')[0];
+		this.content_edit = this.node.getElementsByClassName('content_edit')[0];
+		this.actions = this.node.getElementsByClassName('actions')[0];
+		this.action_edit = this.node.getElementsByClassName('action edit')[0];
+		this.action_done = this.node.getElementsByClassName('action done')[0];
+
+		/*
+		 * Start editing the entry.
+		 */
+		this.edit = function() {
+			this.content.style.visibility = 'hidden';
+			this.content_edit.style.display = 'block';
+			Boardo.focus(this.content_edit);
 		}
-	} // Entries
+
+		/*
+		 * Finished editing the entry.
+		 */
+		this.editDone = function() {
+			this.undone();
+			entries.clean();
+			
+			this.content_edit.blur();
+			this.content.innerHTML = this.content_edit.value;
+			this.content_edit.style.display = '';
+			this.content.style.visibility = 'visible';
+		}
+
+		/*
+		 * Mark the entry as done.
+		 */
+		this.done = function() {
+			this.content.style.textDecoration = 'line-through';
+			this.action_done.style.visibility = 'hidden';
+		}
+
+		/*
+		 * Mark the entry as undone.
+		 */
+		this.undone = function() {
+			this.content.style.textDecoration = '';
+			this.action_done.style.visibility = 'visible';
+		}
+	} // Entry
+	
 } // Boardo
 
-Boardo.addEvent(window, "load", function() { 
-	Boardo.addEvent(document.getElementById('add_entry'), "click", Boardo.Entries.add);
-	Boardo.Entries.clean();
+var entries = new Boardo.Entries();
+
+Boardo.addEvent(window, "load", function() {
+	entries.clean();
+	
+	Boardo.addEvent(document.getElementById('add_entry'), 'click', function() { entries.add(); });
 });
