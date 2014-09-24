@@ -136,6 +136,8 @@ var Boardo = {
 		 * Configure events, style and some variables of the entry. Expected to be called only once.
 		 */
 		this.configure = function() {
+			this.node.setAttribute('id', '');
+		
 			var that = this;
 			Boardo.addEvent(this.node, 'mouseover', function() {
 				if (that.content_edit.style.display != 'block')
@@ -149,11 +151,11 @@ var Boardo = {
 			Boardo.addEvent(this.content_edit, 'keyup', function(e) { that.editing(e); });
 			
 			Boardo.setText(this.content, this.content_edit.getAttribute('placeholder'));
-			this.content_edit_margin = parseInt(Boardo.getStyle(this.content).marginRight);
-			this.content_edit_default_width = parseInt(Boardo.getStyle(this.content_edit).width) + this.content_edit_margin;
+			this.content_margin = parseInt(Boardo.getStyle(this.content).marginRight);
+			this.content_default_width = parseInt(Boardo.getStyle(this.content).width) + this.content_margin;
+			this.contentEditAutosize();
 			
 			this.actions.style.display = 'none';
-			this.node.setAttribute('id', '');
 		}
 
 		/*
@@ -169,9 +171,7 @@ var Boardo = {
 		 * Update the entry when enditing.
 		 */
 		this.editing = function(e) {
-			// Content_edit autosize
-			Boardo.setText(this.content, this.content_edit.value || this.content_edit.getAttribute('placeholder'));
-			this.content_edit.style.width = Math.max(parseInt(Boardo.getStyle(this.content).width) + this.content_edit_margin, this.content_edit_default_width) + 'px';
+			this.contentEditAutosize();
 			
 			// Add a new entry when Enter is pressed
 			if (!e) e = window.event;
@@ -181,6 +181,14 @@ var Boardo = {
 				entries.add(this);
 			}
 		};
+		
+		/*
+		 * Autosize the input content_edit.
+		 */
+		this.contentEditAutosize = function() {
+			Boardo.setText(this.content, this.content_edit.value || this.content_edit.getAttribute('placeholder'));
+			this.content_edit.style.width = Math.max(parseInt(Boardo.getStyle(this.content).width) + this.content_margin, this.content_default_width) + 'px';
+		}
 		
 		/*
 		 * Finish editing the entry.
