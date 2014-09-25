@@ -150,10 +150,9 @@ var Boardo = {
 			Boardo.addEvent(this.content_edit, 'focusout', function() { that.editDone(); });
 			Boardo.addEvent(this.content_edit, 'keyup', function(e) { that.editing(e); });
 			
-			Boardo.setText(this.content, this.content_edit.getAttribute('placeholder'));
 			this.content_margin = parseInt(Boardo.getStyle(this.content).marginRight);
-			this.content_default_width = parseInt(Boardo.getStyle(this.content).width) + this.content_margin;
 			this.contentEditAutosize();
+			this.content_edit.style.minWidth = this.content_edit.style.width;
 			
 			this.actions.style.display = 'none';
 		}
@@ -187,7 +186,7 @@ var Boardo = {
 		 */
 		this.contentEditAutosize = function() {
 			Boardo.setText(this.content, this.content_edit.value || this.content_edit.getAttribute('placeholder'));
-			this.content_edit.style.width = Math.max(parseInt(Boardo.getStyle(this.content).width) + this.content_margin, this.content_default_width) + 'px';
+			this.content_edit.style.width = parseInt(Boardo.getStyle(this.content).width) + this.content_margin + 'px';
 		}
 		
 		/*
