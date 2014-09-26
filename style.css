@@ -48,6 +48,9 @@ input:focus {
 		#entries .entry .actions .action {
 			margin: 0 5px;
 		}
+		#entries .entry .actions .undone {
+			display: none;
+		}
 	
 	#entries .entry .content_edit {
 		display: none;
