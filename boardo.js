@@ -47,6 +47,13 @@ var Boardo = {
 			element.removeChild(element.firstChild);
 		element.appendChild(document.createTextNode(text));
 	},
+
+	/*
+	 *
+	 */
+	getText: function(element) {
+		return element.innerText || element.textContent;
+	},
 	
 	/*
 	 * Manage all the entries.
@@ -105,7 +112,7 @@ var Boardo = {
 		this.stringify = function() {
 			var json = {'entries': []};
 			for (var i = 0; i < this.entries.length; i++) {
-				json.entries.push({'content': this.entries[i].content.textContent || this.entries[i].content.innerText,
+				json.entries.push({'content': this.entries[i].content.textContent || Boardo.getText(this.entries[i].content),
 								   'done': (this.entries[i].action_done.style.display == 'none' ? true : false)});
 			}
 			return JSON.stringify(json);
@@ -193,7 +200,7 @@ var Boardo = {
 			Boardo.addEvent(this.action_edit, 'click', function() { that.edit(); });
 			Boardo.addEvent(this.action_done, 'click', function() { that.done(); });
 			Boardo.addEvent(this.action_undone, 'click', function() { that.undone(); });
-			Boardo.addEvent(this.content_edit, 'focusout', function() { that.editDone(); });
+			Boardo.addEvent(this.content_edit, 'blur', function() { that.editDone(); });
 			Boardo.addEvent(this.content_edit, 'keyup', function(e) { that.editing(e); });
 			
 			this.content_margin = parseInt(Boardo.getStyle(this.content).marginRight);
@@ -209,7 +216,7 @@ var Boardo = {
 		this.edit = function() {
 			this.content.style.visibility = 'hidden';
 			this.content_edit.style.display = 'block';
-			content_before_edit = this.content.innerText; // global variable
+			content_before_edit = Boardo.getText(this.content); // global variable
 			Boardo.focus(this.content_edit);
 		};
 		
@@ -239,7 +246,7 @@ var Boardo = {
 		 * Finish editing the entry.
 		 */
 		this.editDone = function() {
-			if (typeof content_before_edit === 'undefined' || content_before_edit !== this.content.innerText) {
+			if (typeof content_before_edit === 'undefined' || content_before_edit !== Boardo.getText(this.content)) {
 				this.undone();
 			}
 			entries.clean();
