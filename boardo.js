@@ -130,7 +130,6 @@ var Boardo = {
 		 */
 		this.save = function() {
 			var snap = this.stringify();
-			console.log(snap + ' ' + this.history[this.head]);
 			if (snap !== this.history[this.head]) { // Avoid duplicate states
 				this.history.push(snap);
 				this.head = this.history.length-1;
@@ -210,7 +209,7 @@ var Boardo = {
 		this.edit = function() {
 			this.content.style.visibility = 'hidden';
 			this.content_edit.style.display = 'block';
-			content_before_edit = this.content.innerText;
+			content_before_edit = this.content.innerText; // global variable
 			Boardo.focus(this.content_edit);
 		};
 		
@@ -220,10 +219,9 @@ var Boardo = {
 		this.editing = function(e) {
 			this.contentEditAutosize();
 			
-			// Add a new entry when Enter is pressed
 			if (!e) e = window.event;
 			var keyCode = e.keyCode || e.which;
-			if (keyCode == '13') {
+			if (keyCode == '13') { // Add a new entry when Enter is pressed
 				this.content_edit.blur();
 				entries.add(this);
 			}
@@ -279,6 +277,7 @@ var Boardo = {
 var entries = new Boardo.Entries();
 
 Boardo.addEvent(window, "load", function() {
+	entries.save();
 	entries.clean();
 	
 	Boardo.addEvent(document.getElementById('add_entry'), 'click', function() { entries.add(); });
