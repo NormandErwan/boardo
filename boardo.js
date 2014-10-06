@@ -63,6 +63,7 @@ var Boardo = {
 		this.entries = [];
 		this.history = [];
 		this.head; // To navigate through the entries' history
+		this.autosave = true;
 	
 		/*
 		 * Add a new entry.
@@ -73,6 +74,7 @@ var Boardo = {
 			// Insert the new_entry after the previous, if it's provided, or push it
 			var i = 0;
 			while (i < this.entries.length && this.entries[i] !== previous_entry) i++;
+
 			if (typeof previous_entry !== 'undefined' && this.entries[i] === previous_entry) {
 				this.entries.splice(++i, 0, new_entry);
 				Boardo.insertAfter(previous_entry.node, new_entry.node);
@@ -124,11 +126,13 @@ var Boardo = {
 		this.parse = function(json) {
 			json = JSON.parse(json);
 			if (typeof json !== 'undefined') {
+				this.autosave = false;
 				this.clean('all');
 				for (var i = 0; i < json.entries.length; i++) {
 					this.add(undefined, json.entries[i].content, json.entries[i].done);
 					entries.entries[i].editDone();
 				}
+				this.autosave = true;
 			}
 		};
 		
@@ -137,9 +141,11 @@ var Boardo = {
 		 */
 		this.save = function() {
 			var snap = this.stringify();
-			if (snap !== this.history[this.head]) { // Avoid duplicate states
-				this.history.push(snap);
-				this.head = this.history.length-1;
+			if (this.autosave !== false) { // TODO : find a better design to avoid undesirable save when parsing
+				if (snap !== this.history[this.history.length-1]) { // Avoid duplicate states
+					this.history.push(snap);
+					this.head = this.history.length-1;
+				}
 			}
 		}
 		
@@ -246,7 +252,7 @@ var Boardo = {
 		 * Finish editing the entry.
 		 */
 		this.editDone = function() {
-			if (typeof content_before_edit === 'undefined' || content_before_edit !== Boardo.getText(this.content)) {
+			if (typeof content_before_edit !== 'undefined' && content_before_edit !== Boardo.getText(this.content)) {
 				this.undone();
 			}
 			entries.clean();
