@@ -154,7 +154,7 @@ var Boardo = {
          * Push to the server the specified entry of the history.
          */
         this.push = function(entry) {
-            if (entry > 0 && entry < this.history.length) { 
+            if (entry >= 0 && entry < this.history.length) { 
                 var state = this.history[entry];
             
                 var xhr = new XMLHttpRequest();
