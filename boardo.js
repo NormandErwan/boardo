@@ -226,8 +226,9 @@ var Boardo = {
 			Boardo.addEvent(this.content_edit, 'keyup', function(e) { that.editing(e); });
 			
 			this.content_margin = parseInt(Boardo.getStyle(this.content).marginRight);
-			this.contentEditAutosize();
+			Boardo.setText(this.content, this.content_edit.placeholder);
 			this.content_edit.style.minWidth = this.content_edit.style.width;
+			Boardo.setText(this.content, '');
 			
 			this.actions.style.display = 'none';
 		}
@@ -260,7 +261,7 @@ var Boardo = {
 		 * Autosize the input content_edit.
 		 */
 		this.contentEditAutosize = function() {
-			Boardo.setText(this.content, this.content_edit.value || this.content_edit.getAttribute('placeholder'));
+			Boardo.setText(this.content, this.content_edit.value);
 			this.content_edit.style.width = parseInt(Boardo.getStyle(this.content).width) + this.content_margin + 'px';
 		}
 		
