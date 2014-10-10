@@ -145,10 +145,26 @@ var Boardo = {
 				if (snap !== this.history[this.history.length-1]) { // Avoid duplicate states
 					this.history.push(snap);
 					this.head = this.history.length-1;
+                    this.push(this.head);
 				}
 			}
 		}
 		
+        /*
+         * Push to the server the specified entry of the history.
+         */
+        this.push = function(entry) {
+            if (entry > 0 && entry < this.history.length) { 
+                var state = this.history[entry];
+            
+                var xhr = new XMLHttpRequest();
+                xhr.open("POST", "push.php", true);
+                xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
+                xhr.send("state=" + encodeURIComponent(state));
+            }
+        }
+        
+        
 		/*
 		 * Update the entries to their previous state, if it exits.
 		 */
@@ -294,6 +310,6 @@ Boardo.addEvent(window, "load", function() {
 	entries.clean();
 	
 	Boardo.addEvent(document.getElementById('add_entry'), 'click', function() { entries.add(); });
-	Boardo.addEvent(document.getElementById('undo'), 'click', function() { entries.undo(); });
-	Boardo.addEvent(document.getElementById('redo'), 'click', function() { entries.redo(); });
+	//Boardo.addEvent(document.getElementById('undo'), 'click', function() { entries.undo(); });
+	//Boardo.addEvent(document.getElementById('redo'), 'click', function() { entries.redo(); });
 });
