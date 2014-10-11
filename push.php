@@ -1,17 +1,15 @@
 <?php
 
-header("Content-Type: text/plain");
+header("Content-Type: text/plain; charset=UTF-8");
 
 if (empty($_POST['state'])) {
-    exit('-1');
+	exit('error');
 }
 
 $state = $_POST['state'];
-
 $filename = time();
+if (file_put_contents('saves/' . $filename, $state) === false) {
+	exit('error');
+}
 
-$save = fopen('saves/' . $filename, 'w');
-fwrite($save, $state);
-fclose($save);
- 
-exit('0');
+echo $filename;

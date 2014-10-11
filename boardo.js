@@ -1,5 +1,5 @@
 var Boardo = {
-
+	
 	/*
 	 * Execute a function func on the element at the event.
 	 */
@@ -30,7 +30,7 @@ var Boardo = {
 		else
 			parent.insertBefore(new_element, previous_element.nextSibling);
 	},
-
+	
 	/* 
 	 * Focus hack : focus at the end of the input.
 	 */
@@ -47,7 +47,7 @@ var Boardo = {
 			element.removeChild(element.firstChild);
 		element.appendChild(document.createTextNode(text));
 	},
-
+	
 	/*
 	 *
 	 */
@@ -63,18 +63,19 @@ var Boardo = {
 		this.entries = [];
 		this.history = [];
 		this.head; // To navigate through the entries' history
+		this.origin = 0; // The last server's state returned after pushing
 		this.autosave = true;
-	
+		
 		/*
 		 * Add a new entry.
 		 */
 		this.add = function(previous_entry, entry_content, entry_done) {
 			var new_entry = new Boardo.Entry();
 			
-			// Insert the new_entry after the previous, if it's provided, or push it
+			// Insert the new_entry after the previous if it's provided, or append it
 			var i = 0;
 			while (i < this.entries.length && this.entries[i] !== previous_entry) i++;
-
+			
 			if (typeof previous_entry !== 'undefined' && this.entries[i] === previous_entry) {
 				this.entries.splice(++i, 0, new_entry);
 				Boardo.insertAfter(previous_entry.node, new_entry.node);
@@ -145,26 +146,60 @@ var Boardo = {
 				if (snap !== this.history[this.history.length-1]) { // Avoid duplicate states
 					this.history.push(snap);
 					this.head = this.history.length-1;
-                    this.push(this.head);
+					this.push(this.head);
 				}
 			}
 		}
 		
-        /*
-         * Push to the server the specified entry of the history.
-         */
-        this.push = function(entry) {
-            if (entry >= 0 && entry < this.history.length) { 
-                var state = this.history[entry];
-            
-                var xhr = new XMLHttpRequest();
-                xhr.open("POST", "push.php", true);
-                xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
-                xhr.send("state=" + encodeURIComponent(state));
-            }
-        }
-        
-        
+		/*
+		 * Push to the server the specified entry of the history.
+		 */
+		this.push = function(entry) {
+			if (entry >= 0 && entry < this.history.length) { 
+				var state = this.history[entry];
+				var xhr = new XMLHttpRequest();
+				var that = this;
+				
+				xhr.onreadystatechange = function() {
+					if (xhr.readyState == 4) {
+						if (xhr.status == 200 || xhr.status == 0) {
+							that.server = xhr.responseText;
+						} else {
+							that.server = -1;
+						}
+					}
+				}
+				
+				xhr.open("POST", "push.php", true);
+				xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
+				xhr.send("state=" + encodeURIComponent(state));
+			}
+		}
+		
+		/*
+		 * Pull from the server the next state.
+		 */
+		this.pull = function() {
+			if (this.server >= 0) { // If no error
+				var xhr = new XMLHttpRequest();
+				var that = this;
+				
+				xhr.onreadystatechange = function() {
+					if (xhr.readyState == 4) {
+						if (xhr.status == 200 || xhr.status == 0) {
+						
+						} else {
+							that.server = -1;
+						}
+					}
+				}
+				
+				xhr.open("POST", "pull.php", true);
+				xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
+				xhr.send("state=" + encodeURIComponent(state));
+			}
+		}
+		
 		/*
 		 * Update the entries to their previous state, if it exits.
 		 */
@@ -184,7 +219,7 @@ var Boardo = {
 				this.parse(this.history[this.head]);
 			}
 		};
-
+	
 	}, // Entries
 	
 	/*
@@ -209,9 +244,9 @@ var Boardo = {
 			if (typeof entry_done !== 'undefined' && entry_done === true) {
 				this.done();
 			}
-
+			
 			this.node.setAttribute('id', '');
-		
+			
 			var that = this;
 			Boardo.addEvent(this.node, 'mouseover', function() {
 				if (that.content_edit.style.display != 'block')
@@ -232,7 +267,7 @@ var Boardo = {
 			
 			this.actions.style.display = 'none';
 		}
-
+		
 		/*
 		 * Start editing the entry.
 		 */
@@ -279,7 +314,7 @@ var Boardo = {
 			this.content_edit.style.display = '';
 			this.content.style.visibility = 'visible';
 		};
-
+		
 		/*
 		 * Mark the entry as done.
 		 */
@@ -289,7 +324,7 @@ var Boardo = {
 			this.action_undone.style.display = 'inline-block';
 			entries.save();
 		};
-
+		
 		/*
 		 * Mark the entry as undone.
 		 */
