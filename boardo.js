@@ -63,7 +63,7 @@ var Boardo = {
 		this.entries = [];
 		this.history = [];
 		this.head; // To navigate through the entries' history
-		this.origin = 0; // The last server's state returned after pushing
+		this.server = 0; // The last server's state returned after pushing
 		this.autosave = true;
 		
 		/*
@@ -149,56 +149,59 @@ var Boardo = {
 					this.push(this.head);
 				}
 			}
-		}
+		};
 		
 		/*
-		 * Push to the server the specified entry of the history.
+		 *
 		 */
-		this.push = function(entry) {
-			if (entry >= 0 && entry < this.history.length) { 
-				var state = this.history[entry];
-				var xhr = new XMLHttpRequest();
-				var that = this;
-				
-				xhr.onreadystatechange = function() {
-					if (xhr.readyState == 4) {
-						if (xhr.status == 200 || xhr.status == 0) {
-							that.server = xhr.responseText;
-						} else {
-							that.server = -1;
-						}
+		this.requestServer = function(page, success_callback, fail_callback, state) {
+			var xhr = new XMLHttpRequest();
+			
+			xhr.onreadystatechange = function() {
+				if (xhr.readyState == 4) {
+					if (xhr.status == 200 || xhr.status == 0) {
+						success_callback(xhr.responseText);
+					} else {
+						fail_callback(xhr.responseText);
 					}
 				}
-				
-				xhr.open("POST", "push.php", true);
-				xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
-				xhr.send("state=" + encodeURIComponent(state));
+			}			
+			
+			xhr.open("POST", page, true);
+			xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
+			xhr.send("state=" + encodeURIComponent(state));
+		};
+		
+		/*
+		 * Push to the server the specified state of the history.
+		 */
+		this.push = function(state) {
+			if (state >= 0 && state < this.history.length) {
+				var that = this;
+				var state = this.history[state];
+				var success = function(response) {
+					that.server = response;
+				}
+				var fail = function(response) {
+					that.server = response;
+				}
+				this.requestServer('push.php', success, fail, state);
 			}
-		}
+		};
 		
 		/*
 		 * Pull from the server the next state.
 		 */
-		this.pull = function() {
-			if (this.server >= 0) { // If no error
-				var xhr = new XMLHttpRequest();
-				var that = this;
-				
-				xhr.onreadystatechange = function() {
-					if (xhr.readyState == 4) {
-						if (xhr.status == 200 || xhr.status == 0) {
-						
-						} else {
-							that.server = -1;
-						}
-					}
-				}
-				
-				xhr.open("POST", "pull.php", true);
-				xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
-				xhr.send("state=" + encodeURIComponent(state));
+		this.pull = function(state) {
+			var that = this;
+			var success = function(response) {
+				that.server = response;
 			}
-		}
+			var fail = function(response) {
+				that.server = response;
+			}
+			this.requestServer('pull.php', success, fail, state);
+		};
 		
 		/*
 		 * Update the entries to their previous state, if it exits.

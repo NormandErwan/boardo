@@ -13,20 +13,20 @@ register_shutdown_function('shutdown');
 
 ob_start();
 
-if (empty($_GET['state'])) {
+if (empty($_POST['state'])) {
 	exit('{"status": "error"}');
 }
 
 do {
 	$dir = @scandir('saves', SCANDIR_SORT_DESCENDING);
-	$i = array_search($_GET['state'], $dir);
+	$i = array_search($_POST['state'], $dir);
 } while ($i === 0); // While it's the last saved state
 	
 if ($i === false) {
 	if (count($dir) === 0) {
-		exit('{"status": "init"}'); // No state saved
+		exit('{"status": "init"}'); // No saved state
 	} else {
-		exit('{"status": "error"}');
+		$filename = $dir[0]; // Load the most recent saved state
 	}
 } else {
 	$filename = @$dir[--$i]; // Return the next saved state
