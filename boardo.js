@@ -195,7 +195,14 @@ var Boardo = {
 		this.pull = function(state) {
 			var that = this;
 			var success = function(response) {
-				that.server = response;
+				response = JSON.parse(response);
+				if (response.status == 'error') {
+					fail(response);
+				} else if (that.server !== response.status) {
+					that.parse(response.state);
+				}
+				that.server = response.status;
+				that.pull(state);
 			}
 			var fail = function(response) {
 				that.server = response;
@@ -310,6 +317,7 @@ var Boardo = {
 			if (typeof content_before_edit !== 'undefined' && content_before_edit !== Boardo.getText(this.content)) {
 				this.undone();
 			}
+			this.contentEditAutosize();
 			entries.clean();
 			entries.save();
 			
@@ -344,11 +352,10 @@ var Boardo = {
 
 var entries = new Boardo.Entries();
 
-Boardo.addEvent(window, "load", function() {
-	entries.save();
-	entries.clean();
-	
+Boardo.addEvent(window, "load", function() {	
 	Boardo.addEvent(document.getElementById('add_entry'), 'click', function() { entries.add(); });
 	//Boardo.addEvent(document.getElementById('undo'), 'click', function() { entries.undo(); });
 	//Boardo.addEvent(document.getElementById('redo'), 'click', function() { entries.redo(); });
+	
+	entries.pull();
 });
