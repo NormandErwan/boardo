@@ -12,21 +12,28 @@ function shutdown() {
 register_shutdown_function('shutdown');
 
 ob_start();
+
 do {
 	$dir = @array_diff(scandir('saves', SCANDIR_SORT_DESCENDING), array('..', '.'));
-	$i = @array_search($_POST['state'], $dir);
-} while (empty($dir) || $i === 0); // While it's the last saved state
+	$i = @array_search($_POST['id'], $dir);
+	
+	if ($i === 0) {
+		sleep(0.5);
+	}
+} while (!empty($dir) && $i === 0); // While the requested state is the last saved
 
-if ($i !== false) {
-	$filename = @$dir[--$i]; // Return the next saved state
+if (!empty($i)) {
+	$next = @$dir[--$i]; // Return the next saved state
+} else if (!empty($dir)) {
+	$next = $dir[0]; // Load the most recent saved state
 } else {
-	$filename = $dir[0]; // Load the most recent saved state
+	exit('{"status": "init"}'); // There is no saved states
 }
 
-$state = @file_get_contents('saves/' . $filename);
+$state = @file_get_contents('saves/' . $next);
 if ($state === false) {
 	exit('{"status": "error"}');
 }
 
-$state = addslashes($state);
-echo '{"status": "' . $filename . '", "state": "' . $state . '"}';
+$state = str_replace(array('\\', '"'), array('\\\\', '\"'), $state);
+echo '{"status": "success", "id": "' . $next . '", "state": "' . $state . '"}';

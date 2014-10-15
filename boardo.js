@@ -55,6 +55,92 @@ var Boardo = {
 		return element.innerText || element.textContent;
 	},
 	
+	Client: function() {
+		this.entries = new Boardo.Entries();
+		this.started = false;
+		
+		var that = this;
+		Boardo.addEvent(window, "load", function() {	
+			Boardo.addEvent(document.getElementById('add_entry'), 'click', function() { that.entries.add(); });
+			//Boardo.addEvent(document.getElementById('undo'), 'click', function() { this.entries.undo(); });
+			//Boardo.addEvent(document.getElementById('redo'), 'click', function() { this.entries.redo(); });
+		});
+		
+		/*
+		 * Start the client and connections to the server.
+		 */
+		this.start = function() {
+			this.started = true;
+			
+			var that = this;
+			var main = function(id_state) {
+				if (that.started) {
+				
+					var results = function(response) {
+						if (response.status === 'init') {
+							that.entries.clean();
+							setTimeout(main, 5000);
+						} else if (response.status === 'reload') {
+							setTimeout(function() { main(id_state); }, 100);
+						} else if (response === 'error') {
+							console.log('error');
+						} else {
+							that.entries.parse(response.state); //TODO avoid parse after a push
+							setTimeout(function() { main(response.id); }, 5000);
+						}
+					}
+					
+					that.pull(id_state, results);
+				}
+			}
+			main('');
+		};
+		
+		this.stop = function() {
+			this.started = false;
+		};
+		
+		/*
+		 * Execute a request on the server and process the result with the callback function.
+		 */
+		this.requestServer = function(page, callback, argument, value) {
+			var xhr = new XMLHttpRequest();
+			
+			xhr.onreadystatechange = function() {
+				if (xhr.readyState == 4) {
+					if (xhr.status == 200 || xhr.status == 0) {
+						var response = JSON.parse(xhr.responseText);
+						callback(response);
+					} else {
+						var response = {"status": "error", "reason": "connection"};
+						callback(response);
+					}
+				}
+			}			
+			
+			xhr.open("POST", page, true);
+			xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
+			xhr.send(encodeURIComponent(argument) + "=" + encodeURIComponent(value));
+		};
+		
+		/*
+		 * Push to the server the specified state.
+		 */
+		this.push = function(state, callback) {
+			var results = function(response) {
+				console.log(response);
+			}
+			this.requestServer('push.php', callback, 'state', state);
+		};
+		
+		/*
+		 * Pull from the server the next state.
+		 */
+		this.pull = function(id_state, callback) {
+			this.requestServer('pull.php', callback, 'id', id_state);
+		};
+	},
+	
 	/*
 	 * Manage all the entries.
 	 */
@@ -63,9 +149,8 @@ var Boardo = {
 		this.entries = [];
 		this.history = [];
 		this.head; // To navigate through the entries' history
-		this.server = 0; // The last server's state returned after pushing
 		this.autosave = true;
-		
+				
 		/*
 		 * Add a new entry.
 		 */
@@ -113,27 +198,28 @@ var Boardo = {
 		 * Return a JSON string of the entries.
 		 */
 		this.stringify = function() {
-			var json = {'entries': []};
+			var state = {'entries': []};
 			for (var i = 0; i < this.entries.length; i++) {
-				json.entries.push({'content': this.entries[i].content.textContent || Boardo.getText(this.entries[i].content),
+				state.entries.push({'content': this.entries[i].content.textContent || Boardo.getText(this.entries[i].content),
 								   'done': (this.entries[i].action_done.style.display == 'none' ? true : false)});
 			}
-			return JSON.stringify(json);
+			return JSON.stringify(state);
 		};
 		
 		/*
 		 * Update the entries from a JSON string.
 		 */
 		this.parse = function(json) {
-			json = JSON.parse(json);
-			if (typeof json !== 'undefined') {
-				this.autosave = false;
+			state = JSON.parse(json);
+			if (typeof state !== 'undefined') {
+				this.autosave = false; // FIXME : this state needs to be saved but not pushed
 				this.clean('all');
-				for (var i = 0; i < json.entries.length; i++) {
-					this.add(undefined, json.entries[i].content, json.entries[i].done);
+				for (var i = 0; i < state.entries.length; i++) {
+					this.add(undefined, state.entries[i].content, state.entries[i].done);
 					entries.entries[i].editDone();
 				}
 				this.autosave = true;
+				this.clean();
 			}
 		};
 		
@@ -146,70 +232,11 @@ var Boardo = {
 				if (snap !== this.history[this.history.length-1]) { // Avoid duplicate states
 					this.history.push(snap);
 					this.head = this.history.length-1;
-					this.push(this.head);
+					client.push(this.history[this.head]);
 				}
 			}
 		};
-		
-		/*
-		 *
-		 */
-		this.requestServer = function(page, success_callback, fail_callback, state) {
-			var xhr = new XMLHttpRequest();
-			
-			xhr.onreadystatechange = function() {
-				if (xhr.readyState == 4) {
-					if (xhr.status == 200 || xhr.status == 0) {
-						success_callback(xhr.responseText);
-					} else {
-						fail_callback(xhr.responseText);
-					}
-				}
-			}			
-			
-			xhr.open("POST", page, true);
-			xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
-			xhr.send("state=" + encodeURIComponent(state));
-		};
-		
-		/*
-		 * Push to the server the specified state of the history.
-		 */
-		this.push = function(state) {
-			if (state >= 0 && state < this.history.length) {
-				var that = this;
-				var state = this.history[state];
-				var success = function(response) {
-					that.server = response;
-				}
-				var fail = function(response) {
-					that.server = response;
-				}
-				this.requestServer('push.php', success, fail, state);
-			}
-		};
-		
-		/*
-		 * Pull from the server the next state.
-		 */
-		this.pull = function(state) {
-			var that = this;
-			var success = function(response) {
-				response = JSON.parse(response);
-				if (response.status == 'error') {
-					fail(response);
-				} else if (that.server !== response.status) {
-					that.parse(response.state);
-				}
-				that.server = response.status;
-				that.pull(state);
-			}
-			var fail = function(response) {
-				that.server = response;
-			}
-			this.requestServer('pull.php', success, fail, state);
-		};
-		
+				
 		/*
 		 * Update the entries to their previous state, if it exits.
 		 */
@@ -298,7 +325,7 @@ var Boardo = {
 			var keyCode = e.keyCode || e.which;
 			if (keyCode == '13') { // Add a new entry when Enter is pressed
 				this.content_edit.blur();
-				entries.add(this);
+				client.entries.add(this);
 			}
 		};
 		
@@ -318,8 +345,8 @@ var Boardo = {
 				this.undone();
 			}
 			this.contentEditAutosize();
-			entries.clean();
-			entries.save();
+			client.entries.clean();
+			client.entries.save();
 			
 			this.content_edit.blur();
 			this.content_edit.style.display = '';
@@ -333,7 +360,7 @@ var Boardo = {
 			this.content.style.textDecoration = 'line-through';
 			this.action_done.style.display = 'none';
 			this.action_undone.style.display = 'inline-block';
-			entries.save();
+			client.entries.save();
 		};
 		
 		/*
@@ -343,19 +370,11 @@ var Boardo = {
 			this.content.style.textDecoration = '';
 			this.action_undone.style.display = 'none';
 			this.action_done.style.display = 'inline-block';
-			entries.save();
+			client.entries.save();
 		};
 	} // Entry
 	
 } // Boardo
 
-
-var entries = new Boardo.Entries();
-
-Boardo.addEvent(window, "load", function() {	
-	Boardo.addEvent(document.getElementById('add_entry'), 'click', function() { entries.add(); });
-	//Boardo.addEvent(document.getElementById('undo'), 'click', function() { entries.undo(); });
-	//Boardo.addEvent(document.getElementById('redo'), 'click', function() { entries.redo(); });
-	
-	entries.pull();
-});
+var client = new Boardo.Client();
+//client.start();

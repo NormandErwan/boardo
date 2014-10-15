@@ -3,13 +3,13 @@
 header("Content-Type: text/plain; charset=UTF-8");
 
 if (empty($_POST['state'])) {
-	exit('error');
+	exit('{"status": "error"}');
 }
 
 $state = $_POST['state'];
-$filename = time();
-if (file_put_contents('saves/' . $filename, $state) === false) {
-	exit('error');
+$id = time();
+if (file_put_contents('saves/' . $id, $state) === false) {
+	exit('{"status": "error"}');
 }
 
-echo $filename;
+echo '{"status": "success", "id": "' . $next . '"}';
