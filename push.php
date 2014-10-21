@@ -1,6 +1,6 @@
 <?php
 
-header("Content-Type: text/plain; charset=UTF-8");
+header("Content-Type: application/json; charset=UTF-8");
 
 if (empty($_POST['state'])) {
 	exit('{"status": "error"}');
@@ -12,4 +12,4 @@ if (file_put_contents('saves/' . $id, $state) === false) {
 	exit('{"status": "error"}');
 }
 
-echo '{"status": "success", "id": "' . $next . '"}';
+echo '{"status": "success", "id": "' . $id . '"}';

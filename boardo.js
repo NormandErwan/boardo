@@ -56,7 +56,7 @@ var Boardo = {
 	},
 	
 	Client: function() {
-		this.entries = new Boardo.Entries();
+		this.entries = new Boardo.Entries(this);
 		this.started = false;
 		
 		var that = this;
@@ -78,18 +78,17 @@ var Boardo = {
 				
 					var results = function(response) {
 						if (response.status === 'init') {
+							setTimeout(main, 3000);
 							that.entries.clean();
-							setTimeout(main, 5000);
 						} else if (response.status === 'reload') {
-							setTimeout(function() { main(id_state); }, 100);
+							setTimeout(function() { main(id_state); }, 300);
 						} else if (response === 'error') {
 							console.log('error');
 						} else {
+							setTimeout(function() { main(response.id); }, 3000);
 							that.entries.parse(response.state); //TODO avoid parse after a push
-							setTimeout(function() { main(response.id); }, 5000);
 						}
 					}
-					
 					that.pull(id_state, results);
 				}
 			}
@@ -104,33 +103,35 @@ var Boardo = {
 		 * Execute a request on the server and process the result with the callback function.
 		 */
 		this.requestServer = function(page, callback, argument, value) {
-			var xhr = new XMLHttpRequest();
-			
-			xhr.onreadystatechange = function() {
-				if (xhr.readyState == 4) {
-					if (xhr.status == 200 || xhr.status == 0) {
-						var response = JSON.parse(xhr.responseText);
-						callback(response);
-					} else {
-						var response = {"status": "error", "reason": "connection"};
-						callback(response);
+			if (this.started) {
+				var xhr = new XMLHttpRequest();
+				
+				xhr.onreadystatechange = function() {
+					if (xhr.readyState == 4) {
+						if (xhr.status == 200 || xhr.status == 0) {
+							var response = JSON.parse(xhr.responseText);
+							callback(response);
+						} else {
+							var response = {"status": "error", "reason": "connection"};
+							callback(response);
+						}
 					}
-				}
-			}			
-			
-			xhr.open("POST", page, true);
-			xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
-			xhr.send(encodeURIComponent(argument) + "=" + encodeURIComponent(value));
+				}			
+				
+				xhr.open("POST", page, true);
+				xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
+				xhr.send(encodeURIComponent(argument) + "=" + encodeURIComponent(value));
+			}
 		};
 		
 		/*
 		 * Push to the server the specified state.
 		 */
-		this.push = function(state, callback) {
+		this.push = function(state) {
 			var results = function(response) {
 				console.log(response);
 			}
-			this.requestServer('push.php', callback, 'state', state);
+			this.requestServer('push.php', results, 'state', state);
 		};
 		
 		/*
@@ -144,18 +145,19 @@ var Boardo = {
 	/*
 	 * Manage all the entries.
 	 */
-	Entries: function() {
+	Entries: function(client) {
 		this.node = document.getElementById('entries');
+		this.client = client;
 		this.entries = [];
 		this.history = [];
-		this.head; // To navigate through the entries' history
+		this.head = -1; // To navigate through the entries' history
 		this.autosave = true;
-				
+		
 		/*
 		 * Add a new entry.
 		 */
 		this.add = function(previous_entry, entry_content, entry_done) {
-			var new_entry = new Boardo.Entry();
+			var new_entry = new Boardo.Entry(this.client);
 			
 			// Insert the new_entry after the previous if it's provided, or append it
 			var i = 0;
@@ -170,7 +172,10 @@ var Boardo = {
 			}				
 			
 			new_entry.configure(entry_content, entry_done);
-			new_entry.edit();
+			
+			if (typeof entry_content === 'undefined' && typeof entry_done === 'undefined') {
+				new_entry.edit();
+			}
 		};
 		
 		/*
@@ -190,7 +195,7 @@ var Boardo = {
 					content_edit.blur();
 			}
 						
-			if (this.entries.length == 0) // Automatically add a first entry
+			if (this.entries.length == 0 && what != 'all') // Automatically add a first entry
 				this.add();
 		};
 		
@@ -201,7 +206,7 @@ var Boardo = {
 			var state = {'entries': []};
 			for (var i = 0; i < this.entries.length; i++) {
 				state.entries.push({'content': this.entries[i].content.textContent || Boardo.getText(this.entries[i].content),
-								   'done': (this.entries[i].action_done.style.display == 'none' ? true : false)});
+								    'done': (this.entries[i].action_done.style.display == 'none' ? true : false)});
 			}
 			return JSON.stringify(state);
 		};
@@ -209,14 +214,13 @@ var Boardo = {
 		/*
 		 * Update the entries from a JSON string.
 		 */
-		this.parse = function(json) {
-			state = JSON.parse(json);
-			if (typeof state !== 'undefined') {
+		this.parse = function(state) {
+			if (typeof state !== 'undefined' && typeof state.entries !== 'undefined') {
 				this.autosave = false; // FIXME : this state needs to be saved but not pushed
 				this.clean('all');
 				for (var i = 0; i < state.entries.length; i++) {
 					this.add(undefined, state.entries[i].content, state.entries[i].done);
-					entries.entries[i].editDone();
+					this.entries[i].editDone();
 				}
 				this.autosave = true;
 				this.clean();
@@ -227,12 +231,12 @@ var Boardo = {
 		 * Take a snapshot of the entries' state and save it in a history.
 		 */
 		this.save = function() {
-			var snap = this.stringify();
+			var snap = this.stringify(); 
 			if (this.autosave !== false) { // TODO : find a better design to avoid undesirable save when parsing
 				if (snap !== this.history[this.history.length-1]) { // Avoid duplicate states
 					this.history.push(snap);
 					this.head = this.history.length-1;
-					client.push(this.history[this.head]);
+					this.client.push(this.history[this.head]);
 				}
 			}
 		};
@@ -262,8 +266,9 @@ var Boardo = {
 	/*
 	 * An entry is an editable line of text, which can be marked as done or undone.
 	 */
-	Entry: function() {
+	Entry: function(client) {
 		this.node = document.getElementById('entry_template').cloneNode(true);
+		this.client = client;
 		this.content = this.node.getElementsByClassName('content')[0];
 		this.content_edit = this.node.getElementsByClassName('content_edit')[0];
 		this.actions = this.node.getElementsByClassName('actions')[0];
@@ -277,12 +282,14 @@ var Boardo = {
 		this.configure = function(entry_content, entry_done) {
 			if (typeof entry_content !== 'undefined') {
 				this.content_edit.value = entry_content;
+				Boardo.setText(this.content, entry_content);
 			}
 			if (typeof entry_done !== 'undefined' && entry_done === true) {
 				this.done();
 			}
 			
 			this.node.setAttribute('id', '');
+			this.actions.style.display = 'none';
 			
 			var that = this;
 			Boardo.addEvent(this.node, 'mouseover', function() {
@@ -292,18 +299,16 @@ var Boardo = {
 			Boardo.addEvent(this.node, 'mouseout', function() { that.actions.style.display = 'none'; });
 			Boardo.addEvent(this.content, 'click', function() { that.edit(); });
 			Boardo.addEvent(this.action_edit, 'click', function() { that.edit(); });
-			Boardo.addEvent(this.action_done, 'click', function() { that.done(); });
-			Boardo.addEvent(this.action_undone, 'click', function() { that.undone(); });
-			Boardo.addEvent(this.content_edit, 'blur', function() { that.editDone(); });
+			Boardo.addEvent(this.action_done, 'click', function() { that.done(); that.client.entries.save(); });
+			Boardo.addEvent(this.action_undone, 'click', function() { that.undone(); that.client.entries.save(); });
+			Boardo.addEvent(this.content_edit, 'blur', function() { that.editDone(); that.client.entries.save(); });
 			Boardo.addEvent(this.content_edit, 'keyup', function(e) { that.editing(e); });
 			
-			this.content_margin = parseInt(Boardo.getStyle(this.content).marginRight);
 			Boardo.setText(this.content, this.content_edit.placeholder);
-			this.content_edit.style.minWidth = this.content_edit.style.width;
+			this.content_edit.style.minWidth = Boardo.getStyle(this.content).width;
+			this.node.style.minHeight = Boardo.getStyle(this.content).height;
 			Boardo.setText(this.content, '');
-			
-			this.actions.style.display = 'none';
-		}
+		};
 		
 		/*
 		 * Start editing the entry.
@@ -325,7 +330,7 @@ var Boardo = {
 			var keyCode = e.keyCode || e.which;
 			if (keyCode == '13') { // Add a new entry when Enter is pressed
 				this.content_edit.blur();
-				client.entries.add(this);
+				this.client.entries.add(this);
 			}
 		};
 		
@@ -334,19 +339,18 @@ var Boardo = {
 		 */
 		this.contentEditAutosize = function() {
 			Boardo.setText(this.content, this.content_edit.value);
-			this.content_edit.style.width = parseInt(Boardo.getStyle(this.content).width) + this.content_margin + 'px';
-		}
+			this.content_edit.style.width = parseInt(Boardo.getStyle(this.content).width) + parseInt(Boardo.getStyle(this.content).marginRight) + 'px';
+		};
 		
 		/*
 		 * Finish editing the entry.
 		 */
 		this.editDone = function() {
+			Boardo.setText(this.content, this.content_edit.value);
 			if (typeof content_before_edit !== 'undefined' && content_before_edit !== Boardo.getText(this.content)) {
 				this.undone();
 			}
-			this.contentEditAutosize();
-			client.entries.clean();
-			client.entries.save();
+			this.client.entries.clean();
 			
 			this.content_edit.blur();
 			this.content_edit.style.display = '';
@@ -360,7 +364,6 @@ var Boardo = {
 			this.content.style.textDecoration = 'line-through';
 			this.action_done.style.display = 'none';
 			this.action_undone.style.display = 'inline-block';
-			client.entries.save();
 		};
 		
 		/*
@@ -370,11 +373,10 @@ var Boardo = {
 			this.content.style.textDecoration = '';
 			this.action_undone.style.display = 'none';
 			this.action_done.style.display = 'inline-block';
-			client.entries.save();
 		};
 	} // Entry
 	
 } // Boardo
 
 var client = new Boardo.Client();
-//client.start();
+client.start();
