@@ -56,6 +56,14 @@
 		},
 		
 		/*
+		 * Get the keyCode associated to the event e.
+		 */
+		keyCode: function(e) {
+			if (!e) e = window.event;
+			return e.keyCode || e.which;
+		},
+		
+		/*
 		 * Manage the connections with the server.
 		 */
 		Client: function() {			
@@ -190,7 +198,7 @@
 					} else
 						content_edit.blur();
 				}
-							
+				
 				if (this.entries.length == 0 && what != 'all') // Automatically add a first entry
 					this.add();
 			};
@@ -201,7 +209,8 @@
 			this.stringify = function() {
 				var state = {'entries': []};
 				for (var i = 0; i < this.entries.length; i++) {
-					state.entries.push({'content': this.entries[i].content.textContent || Boardo.getText(this.entries[i].content),
+					state.entries.push({'content': Boardo.getText(this.entries[i].content),
+										'editing': (this.entries[i].action_done.style.display == 'none' ? true : false),
 										'done': (this.entries[i].action_done.style.display == 'none' ? true : false)});
 				}
 				return JSON.stringify(state);
@@ -279,19 +288,16 @@
 			this.edit = function() {
 				this.content.style.visibility = 'hidden';
 				this.content_edit.style.display = 'block';
-				content_before_edit = Boardo.getText(this.content); // global variable
 				Boardo.focus(this.content_edit);
+				content_before_edit = Boardo.getText(this.content); // global variable
 			};
 			
 			/*
-			 * Update the entry when enditing.
+			 * Update the entry when editing.
 			 */
 			this.editing = function(e) {
 				this.contentEditAutosize();
-				
-				if (!e) e = window.event;
-				var keyCode = e.keyCode || e.which;
-				if (keyCode == '13') { // Add a new entry when Enter is pressed
+				if (Boardo.keyCode(e) == '13') { // Add a new entry when Enter is pressed
 					this.content_edit.blur();
 					this.client.entries.add(this);
 				}
@@ -306,15 +312,13 @@
 			};
 			
 			/*
-			 * Finish editing the entry.
+			 * Finished to edit the entry.
 			 */
 			this.editDone = function() {
 				Boardo.setText(this.content, this.content_edit.value);
 				if (typeof content_before_edit !== 'undefined' && content_before_edit !== Boardo.getText(this.content)) {
 					this.undone();
 				}
-				this.client.entries.clean();
-				
 				this.content_edit.blur();
 				this.content_edit.style.display = '';
 				this.content.style.visibility = 'visible';
